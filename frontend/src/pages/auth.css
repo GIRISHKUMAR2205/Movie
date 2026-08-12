@@ -1,0 +1,172 @@
+:root {
+  --auth-bg: #0f1115;
+  --auth-card-bg: #171a21;
+  --auth-border: #262b35;
+  --auth-text: #e9ebef;
+  --auth-muted: #8a90a0;
+  --auth-accent: #5b8cff;
+  --auth-accent-hover: #7aa0ff;
+  --auth-error-bg: #2a1618;
+  --auth-error-text: #ff8a8a;
+  --auth-radius: 14px;
+}
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--auth-bg);
+  padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--auth-card-bg);
+  border: 1px solid var(--auth-border);
+  border-radius: var(--auth-radius);
+  padding: 36px 32px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.auth-title {
+  color: var(--auth-text);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.auth-subtitle {
+  color: var(--auth-muted);
+  font-size: 0.9rem;
+  margin: 0 0 24px;
+}
+
+.auth-field {
+  margin-bottom: 16px;
+}
+
+.auth-label {
+  display: block;
+  color: var(--auth-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.auth-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #0f1115;
+  border: 1px solid var(--auth-border);
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: var(--auth-text);
+  font-size: 0.95rem;
+  transition: border-color 0.15s ease;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--auth-accent);
+}
+
+.auth-input[aria-invalid="true"] {
+  border-color: var(--auth-error-text);
+}
+
+.auth-field-error {
+  color: var(--auth-error-text);
+  font-size: 0.78rem;
+  margin-top: 5px;
+}
+
+.auth-submit {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--auth-accent);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  margin-top: 4px;
+}
+
+.auth-submit:hover:not(:disabled) {
+  background: var(--auth-accent-hover);
+}
+
+.auth-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-error-banner {
+  background: var(--auth-error-bg);
+  color: var(--auth-error-text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0;
+  color: var(--auth-muted);
+  font-size: 0.78rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--auth-border);
+}
+
+.google-auth-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+.auth-footer {
+  margin-top: 22px;
+  text-align: center;
+  color: var(--auth-muted);
+  font-size: 0.85rem;
+}
+
+.auth-link {
+  color: var(--auth-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.auth-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--auth-muted);
+  background: var(--auth-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}

@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: user-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/users
+    username: postgres
+    password: pass
+  security:
+    jwt:
+      secret: 15631[advad]3a53d23f0va54f1era54g320av1d2v0a21vdfvaVaDADVajkdvhbkjav #Secret 
+      expiration: 30
+    cookie:
+      name: auth-token
+      httpOnly: false
+      secure: true
+      max-age: 60 * 60 * 24 * 30 # 30 days
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ###################################################
+            client-secret: ##############################################y
+            redirect-uri: http://localhost:8084/users/login/oauth2/code/google
+            # authorization-grant-type: authorization_code
+            scope:
+                - profile
+                - email
+                - openid
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+    show-sql: true
+
+    properties:
+      hibernate:
+        format-sql: true
+server:
+    port: 8084
+    servlet:
+      context-path: /users
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# eureka:
+#   client:
+#     healthcheck:
+#       enabled: true
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger.html
+logging:
+  level:
+    root: info
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: TRACE
+  file:
+    path: /home/girish/Projects/backend/user-service/logs
+frontend:
+  app:
+    base-url: http://localhost:3000
+    oauth2-redirect-url: ${frontend.app.base-url}/dashboard
