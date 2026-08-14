@@ -4,8 +4,7 @@ import {
   loginRequest,
   logoutRequest,
   signupRequest,
-  googleAuthRequest,
-  oidcLogoutRequest
+  googleAuthRequest
 } from "../api/authApi";
 
 const AuthContext = createContext(null);
@@ -25,8 +24,6 @@ function authReducer(state, action) {
     case "AUTH_FAILURE":
       return { ...state, status: "unauthenticated", user: null, error: action.payload };
     case "LOGOUT":
-      return { ...state, status: "unauthenticated", user: null, error: null };
-    case "OIDC_LOGOUT":
       return { ...state, status: "unauthenticated", user: null, error: null };
     default:
       return state;
@@ -92,14 +89,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const oidcLogout = useCallback(async () => {
-    try {
-      await oidcLogoutRequest();
-    }
-    finally{
-      dispatch({ type: "OIDC_LOGOUT"});
-    }
-  },[])
+  
 
   const value = useMemo(
     () => ({
@@ -110,10 +100,9 @@ export function AuthProvider({ children }) {
       isLoading: state.status === "loading" || state.status === "idle",
       login,
       signup,
-      logout,
-      oidcLogout
+      logout
     }),
-    [state, login, signup, logout, oidcLogout]
+    [state, login, signup, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

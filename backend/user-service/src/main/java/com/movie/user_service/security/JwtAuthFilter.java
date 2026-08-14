@@ -11,6 +11,8 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.movie.user_service.service.JwtService;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -23,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 public class JwtAuthFilter extends OncePerRequestFilter{
 
     private final JwtService jwtService;
+    private final CookieConfiguration cookieConfiguration;
 
 
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -31,7 +34,11 @@ public class JwtAuthFilter extends OncePerRequestFilter{
                     Cookie[] cookies=request.getCookies();
                     if(cookies != null){
                         for(Cookie cookie:cookies){
-                            if(("auth-token").equals(cookie.getName())){
+                            if(("JSESSIONID").equals(cookie.getName())){
+                                Cookie jsessionCookie = cookieConfiguration.createCookie("JSESSIONID", "", 0);
+                                response.addCookie(jsessionCookie);
+                            }
+                            else if(("auth-token").equals(cookie.getName())){
                                 String token=cookie.getValue();
                                 Jwt jwt=jwtService.verifyToken(token);
                                 SecurityContext context=SecurityContextHolder.createEmptyContext();

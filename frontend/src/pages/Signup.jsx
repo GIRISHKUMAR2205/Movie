@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, replace, useNavigate, useSearchParams } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import GoogleAuthButton from "../components/GoogleAuthButton";
 import "./auth.css";
@@ -16,7 +16,7 @@ const GOOGLE_ERROR_MESSAGES = {
 };
 
 export default function Signup() {
-  const { signup } = useAuth();
+  const { user, signup } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -27,12 +27,16 @@ export default function Signup() {
 
   useEffect(() => {
     const errorCode = searchParams.get("error");
+    if(user != null){
+      navigate("/dashboard", replace);
+      return ;
+    }
     if (errorCode) {
       setFormError(GOOGLE_ERROR_MESSAGES[errorCode] || "Sign-up failed. Please try again.");
       searchParams.delete("error");
       setSearchParams(searchParams, { replace: true });
     }
-  }, []);
+  }, [user, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

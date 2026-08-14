@@ -15,5 +15,3 @@ export const logoutRequest = () =>
 export const fetchCurrentUser = () =>
   axiosClient.get("/users/me").then((res) => res.data);
 
-export const oidcLogoutRequest = () =>
-  axiosClient.get("/users/signout/oidc").then((res) => res.data);

@@ -6,22 +6,26 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import com.movie.user_service.oauth2.OAuth2LoginFailureHandler;
 import com.movie.user_service.oauth2.OAuth2LoginSuccessHandler;
+import com.movie.user_service.service.CustomOidcUserDetailsService;
+
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 
@@ -32,8 +36,6 @@ public class SecurityConfig {
     private final CustomOidcUserDetailsService customOidcUserDetailsService;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
-        @Value("${frontend.app.base-url}")
-    private String baseUrl;
     private static final Logger log= LoggerFactory.getLogger(SecurityConfig.class);
 
 
@@ -45,9 +47,9 @@ public class SecurityConfig {
                 .csrf(csrf->csrf.disable())
                 .cors(cors->cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/login/**","/signup/**","/oauth2/**","/signout/**").permitAll()
-                    // .anyRequest().authenticated()
-                    .anyRequest().permitAll()
+                    .requestMatchers("/login**","/signup**","/signout**","/oauth2/**").permitAll()
+                    .anyRequest().authenticated()
+                    //     .anyRequest().permitAll()
                 )
                 // .authenticationManager(authenticationManager()) //Manual Configuration can be used with authentication manager
                 // Dont use need to figure out how to stop additional calls after success logout it reauthenticating after logout
@@ -59,6 +61,17 @@ public class SecurityConfig {
                 //                         // .addLogoutHandler(clearSiteData)
                 //                     .permitAll())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .anonymous(anonymous -> anonymous.disable())
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(
+                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
+                        )
+                )
+                .sessionManagement(session ->
+                    session.sessionCreationPolicy(
+                            SessionCreationPolicy.STATELESS
+                    )
+                )
                 .oauth2Login(oauth -> oauth.defaultSuccessUrl("/dashboard")
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(customOidcUserDetailsService))
                         .successHandler(
@@ -68,12 +81,6 @@ public class SecurityConfig {
                                 oAuth2LoginFailureHandler
                         )
                 )
-                .sessionManagement(session ->
-                    session.sessionCreationPolicy(
-                            SessionCreationPolicy.STATELESS
-                    )
-                )
-                .anonymous(anonymous -> anonymous.disable())
                 .build();
     } 
 
@@ -107,16 +114,5 @@ public class SecurityConfig {
 
         source.registerCorsConfiguration("/**", config);
         return source;
-        }
-
-        @Bean
-        OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler(ClientRegistrationRepository clientRegistrationRepository){
-                OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
-                        new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
-
-                // Sets the location that the End-User's User Agent will be redirected to
-                // after the logout has been performed at the Provider
-                oidcLogoutSuccessHandler.setPostLogoutRedirectUri(baseUrl);
-                return oidcLogoutSuccessHandler;
         }
 }

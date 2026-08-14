@@ -3,7 +3,10 @@ package com.movie.user_service.dto;
 import lombok.Data;
 
 @Data
-public class UserDto {
+public class SignupDto {
+    String name;
     String email;
+    String role;
     String password;
+    String confirmPassword;
 }

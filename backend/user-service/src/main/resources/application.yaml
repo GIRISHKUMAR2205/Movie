@@ -12,14 +12,14 @@ spring:
     cookie:
       name: auth-token
       httpOnly: false
-      secure: true
+      secure: false
       max-age: 60 * 60 * 24 * 30 # 30 days
     oauth2:
       client:
         registration:
           google:
-            client-id: ###################################################
-            client-secret: ##############################################y
+            client-id: ${CLIENT_ID}
+            client-secret: ${CLIENT_SECRET}
             redirect-uri: http://localhost:8084/users/login/oauth2/code/google
             # authorization-grant-type: authorization_code
             scope:
@@ -28,7 +28,7 @@ spring:
                 - openid
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update #change it to create for entity changes.
 
     show-sql: true
 

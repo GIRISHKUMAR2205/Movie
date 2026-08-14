@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.movie.user_service.security.CookieConfiguration;
-import com.movie.user_service.security.JwtService;
+import com.movie.user_service.service.JwtService;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -35,7 +35,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         OAuth2User user = (OAuth2User) authentication.getPrincipal();
 
         String token=jwtService.generateToken(authentication);
-        Cookie cookie=cookieConfiguration.createCookie("auth-token",token,60*60*15);
+        Cookie cookie=cookieConfiguration.createCookie("auth-token",token,60*60*24*15);
         response.addCookie(cookie);
         log.info("email {}",user.getAttribute("email").toString());
         String targetUrl=UriComponentsBuilder.fromUriString(frontEndRedirectUrl).toUriString();

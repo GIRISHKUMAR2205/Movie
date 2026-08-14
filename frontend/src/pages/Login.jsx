@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, replace, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import GoogleAuthButton from "../components/GoogleAuthButton";
 import "./auth.css";
@@ -16,7 +16,7 @@ const GOOGLE_ERROR_MESSAGES = {
 };
 
 export default function Login() {
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -30,13 +30,17 @@ export default function Login() {
   // Surface an error the backend sent back via redirect after a failed
   // Google OAuth2 attempt, then strip it from the URL.
   useEffect(() => {
+    if(user != null){
+      navigate("/dashboard", replace);
+      return ;
+    }
     const errorCode = searchParams.get("error");
     if (errorCode) {
       setFormError(GOOGLE_ERROR_MESSAGES[errorCode] || "Sign-in failed. Please try again.");
       searchParams.delete("error");
       setSearchParams(searchParams, { replace: true });
     }
-  }, []);
+  }, [user, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

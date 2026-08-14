@@ -1,4 +1,4 @@
-package com.movie.user_service.security;
+package com.movie.user_service.service;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import com.movie.user_service.entity.AuthProvider;
 import com.movie.user_service.entity.User;
-import com.movie.user_service.oauth2.OAuth2UserRegistrationService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,7 +25,7 @@ public class CustomOidcUserDetailsService  extends OidcUserService{
                 String registrationId=userRequest.getClientRegistration().getRegistrationId();
                 AuthProvider authProvider = AuthProvider.getAuthProvider(registrationId);
 
-                User dbUser=registrationService.processUserRegistration(oidcUser.getEmail(), oidcUser.getName(),oidcUser.getSubject(),authProvider,"ROLE_USER");           
+                User dbUser=registrationService.processUserRegistration(oidcUser.getEmail(), oidcUser.getClaims().get("name").toString(),oidcUser.getSubject(),authProvider,"ROLE_USER");           
                 Set<GrantedAuthority> mappedAuthorities = new HashSet<>(oidcUser.getAuthorities());
                 mappedAuthorities.add(new SimpleGrantedAuthority(dbUser.getRole()));
                 

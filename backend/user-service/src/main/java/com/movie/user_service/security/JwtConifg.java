@@ -1,5 +1,11 @@
 package com.movie.user_service.security;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.Base64;
+import java.util.HexFormat;
+
 import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -14,9 +20,10 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 @Configuration
 public class JwtConifg {
-        @Value("${spring.security.jwt.secret}")
+    @Value("${spring.security.jwt.secret}")
     private String jwtKey;
-        @Bean
+
+    @Bean
     JwtEncoder jwtEncoder() {
         return new NimbusJwtEncoder(new ImmutableSecret<>(jwtKey.getBytes()));
     }
@@ -27,4 +34,5 @@ public class JwtConifg {
         SecretKeySpec originalKey = new SecretKeySpec(bytes,0,bytes.length,"HmacSHA256");
         return NimbusJwtDecoder.withSecretKey(originalKey).macAlgorithm(MacAlgorithm.HS256).build();
     }
+
 }
