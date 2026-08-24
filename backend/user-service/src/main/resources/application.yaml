@@ -46,10 +46,6 @@ management:
       exposure:
         include: health,info
 
-# eureka:
-#   client:
-#     healthcheck:
-#       enabled: true
 springdoc:
   api-docs:
     enabled: true
@@ -67,4 +63,5 @@ logging:
 frontend:
   app:
     base-url: http://localhost:3000
+    login-url: ${frontend.app.base-url}/login
     oauth2-redirect-url: ${frontend.app.base-url}/dashboard

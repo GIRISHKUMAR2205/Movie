@@ -3,7 +3,6 @@ package com.movie.user_service.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import com.movie.user_service.dto.LoginDto;
 import com.movie.user_service.dto.RespDto;
 import com.movie.user_service.dto.SignupDto;
 import com.movie.user_service.entity.User;
@@ -13,10 +12,9 @@ public interface UserMapper {
 
     @Mapping(target = "userName", source = "name")
     @Mapping(target = "oauthAccounts", ignore = true)
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "role", constant = "ROLE_USER")
+    @Mapping(target = "roles", ignore = true)
     User fromSignupDto(SignupDto dto);
-
+    
     @Mapping(target = "name", source = "userName")
     RespDto toRespDto(User user);
 }

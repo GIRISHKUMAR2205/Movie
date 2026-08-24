@@ -16,7 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class OAuth2LoginFailureHandler implements AuthenticationFailureHandler {
     private static final Logger log=LoggerFactory.getLogger(OAuth2LoginFailureHandler.class);
-    @Value("${frontend.app.oauth2-redirect-url}")
+    @Value("${frontend.app.login-url}")
     private String frontEndRedirectUrl;
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,

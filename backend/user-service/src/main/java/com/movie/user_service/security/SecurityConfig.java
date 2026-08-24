@@ -1,31 +1,34 @@
 package com.movie.user_service.security;
 
 import java.util.Arrays;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import java.util.Optional;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.HandlerExceptionResolver;
-
 import com.movie.user_service.oauth2.OAuth2LoginFailureHandler;
 import com.movie.user_service.oauth2.OAuth2LoginSuccessHandler;
 import com.movie.user_service.service.CustomOidcUserDetailsService;
 
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 
 
@@ -36,18 +39,20 @@ public class SecurityConfig {
     private final CustomOidcUserDetailsService customOidcUserDetailsService;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
-    private static final Logger log= LoggerFactory.getLogger(SecurityConfig.class);
 
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http,JwtAuthFilter jwtAuthFilter) throws Exception{
+    SecurityFilterChain filterChain(HttpSecurity http,JwtAuthFilter jwtAuthFilter,OAuthSignUpFilter signupFlowFilter) throws Exception{
         // HeaderWriterLogoutHandler clearSiteData = new HeaderWriterLogoutHandler(new ClearSiteDataHeaderWriter(Directive.COOKIES));
         // CookieClearingLogoutHandler cookies = new CookieClearingLogoutHandler("auth-token");
         return http
                 .csrf(csrf->csrf.disable())
                 .cors(cors->cors.configurationSource(corsConfigurationSource()))
+                .anonymous(anonymous -> anonymous.disable())
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/login**","/signup**","/signout**","/oauth2/**").permitAll()
+                        .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
+                    .requestMatchers("/login**","/signup**","/signout**","/oauth2/**","/delete**").permitAll()
+                    .requestMatchers("/superadmin").hasRole("SUPERADMIN")
                     .anyRequest().authenticated()
                     //     .anyRequest().permitAll()
                 )
@@ -60,8 +65,10 @@ public class SecurityConfig {
                 //                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler())
                 //                         // .addLogoutHandler(clearSiteData)
                 //                     .permitAll())
+                .addFilterBefore(
+                signupFlowFilter,
+                OAuth2AuthorizationRequestRedirectFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .anonymous(anonymous -> anonymous.disable())
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(
                                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
@@ -98,8 +105,34 @@ public class SecurityConfig {
 
 
         @Bean
+        public AuditorAware<String> auditorProvider() {
+                return () -> {
+                        Authentication auth =
+                                SecurityContextHolder.getContext().getAuthentication();
+
+                        if (auth == null ||
+                        !auth.isAuthenticated()) {
+
+                        return Optional.of("SYSTEM");
+                        }
+
+                        return Optional.of(auth.getName());
+                };
+        }
+
+
+        @Bean
+        static RoleHierarchy roleHierarchy() {
+        return RoleHierarchyImpl.withDefaultRolePrefix()
+                .role("SUPERADMIN").implies("ADMIN")
+                .role("ADMIN").implies("USER")
+                .build();
+        }
+        
+
+        @Bean
         public PasswordEncoder passwordEncoder() {
-        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+                return PasswordEncoderFactories.createDelegatingPasswordEncoder();
         }
 
         @Bean

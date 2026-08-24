@@ -34,11 +34,9 @@ public class JwtAuthFilter extends OncePerRequestFilter{
                     Cookie[] cookies=request.getCookies();
                     if(cookies != null){
                         for(Cookie cookie:cookies){
-                            if(("JSESSIONID").equals(cookie.getName())){
+                            if(("auth-token").equals(cookie.getName())){
                                 Cookie jsessionCookie = cookieConfiguration.createCookie("JSESSIONID", "", 0);
                                 response.addCookie(jsessionCookie);
-                            }
-                            else if(("auth-token").equals(cookie.getName())){
                                 String token=cookie.getValue();
                                 Jwt jwt=jwtService.verifyToken(token);
                                 SecurityContext context=SecurityContextHolder.createEmptyContext();

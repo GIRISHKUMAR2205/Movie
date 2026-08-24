@@ -1,11 +1,11 @@
 package com.movie.user_service.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Entity
@@ -19,15 +19,12 @@ import lombok.NoArgsConstructor;
 )
 @AllArgsConstructor
 @NoArgsConstructor
+@EqualsAndHashCode(callSuper = false)
 @Data
-public class OAuthAccount {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    private Long id;
+public class OAuthAccount extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "provider" , nullable = false)
     private AuthProvider authProvider;
 
     @Column(name = "provider_subject", nullable = false)

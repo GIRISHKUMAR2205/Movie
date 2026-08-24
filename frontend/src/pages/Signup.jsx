@@ -152,7 +152,7 @@ export default function Signup() {
         </form>
 
         <div className="auth-divider">OR</div>
-        <GoogleAuthButton />
+        <GoogleAuthButton flow="admin"/>
 
         <p className="auth-footer">
           Already have an account? <Link className="auth-link" to="/login">Log in</Link>

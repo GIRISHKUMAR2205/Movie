@@ -1,13 +1,16 @@
 package com.movie.user_service.entity;
 
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
@@ -15,13 +18,9 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 @Table(name = "users")
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    private Long id;
-
+@Getter
+@Setter
+public class User extends BaseEntity {
     @Column(nullable = false)
     private String userName;
 
@@ -30,8 +29,13 @@ public class User {
 
     private String password;
 
-    @Column(nullable = false)
-    private String role;
+    @ManyToMany
+    @JoinTable(
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
 
     // @Column(name = "refresh_token_hash",nullable = false)
     // private String refreshTokenHash;
@@ -46,4 +50,6 @@ public class User {
     )
     @JsonManagedReference
     private List<OAuthAccount> oauthAccounts = new ArrayList<>();
+    
+    
 }

@@ -50,10 +50,10 @@ export default function Login() {
 
   const validate = () => {
     const errors = {};
-    // if (!form.email) errors.email = "Email is required.";
-    // else if (!EMAIL_RE.test(form.email)) errors.email = "Enter a valid email address.";
-    // if (!form.password) errors.password = "Password is required.";
-    // setFieldErrors(errors);
+    if (!form.email) errors.email = "Email is required.";
+    else if (!EMAIL_RE.test(form.email)) errors.email = "Enter a valid email address.";
+    if (!form.password) errors.password = "Password is required.";
+    setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
 

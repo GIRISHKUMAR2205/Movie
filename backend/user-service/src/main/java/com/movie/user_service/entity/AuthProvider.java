@@ -1,6 +1,5 @@
 package com.movie.user_service.entity;
 
-
 public enum AuthProvider {
     LOCAL,GOOGLE;
 

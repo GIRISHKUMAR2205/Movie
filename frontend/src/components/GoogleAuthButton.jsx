@@ -15,9 +15,9 @@ import { BASE_URL } from "../api/axiosClient";
  * it only ever sees the final redirect and the resulting cookie session.
  * No Google script, client ID, or popup handling is needed here.
  */
-export default function GoogleAuthButton({ label = "Continue with Google" }) {
+export default function GoogleAuthButton({ label = "Continue with Google" ,flow = "user"}) {
   const handleClick = () => {
-    window.location.href = `${BASE_URL}/users/oauth2/authorization/google`;
+    window.location.href = `${BASE_URL}/users/oauth2/authorization/google?flow=${flow}`;
   };
 
   return (

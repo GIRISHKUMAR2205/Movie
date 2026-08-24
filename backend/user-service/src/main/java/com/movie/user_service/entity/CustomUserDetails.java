@@ -1,8 +1,8 @@
 package com.movie.user_service.entity;
 
-import java.time.Instant;
 import java.util.Collection;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,7 +17,7 @@ public class CustomUserDetails implements UserDetails {
     private final String email;
     private final String password;
     private final String userName;
-    private final String role;
+    private final Set<Role> roles;
     // private final String refreshToken;
     // private final Instant refreshTokenExpiresAt;
 
@@ -26,14 +26,29 @@ public class CustomUserDetails implements UserDetails {
         this.email = user.getEmail();
         this.password = user.getPassword();
         this.userName = user.getUserName();
-        this.role = user.getRole();
+        this.roles = user.getRoles();
         // this.refreshToken=user.getRefreshTokenHash();
         // this.refreshTokenExpiresAt=user.getRefreshTokenExpiresAt();
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role));
+
+        Set<GrantedAuthority> authorities = new HashSet<>();
+
+        roles.forEach(role -> {
+            authorities.add(new SimpleGrantedAuthority(role.getRoleName()));
+
+            role.getPrivileges().forEach(privilege ->
+                    authorities.add(
+                            new SimpleGrantedAuthority(
+                                    privilege.getPrivilegeName()
+                            )
+                    )
+            );
+        });
+
+        return authorities;
     }
 
     @Override
@@ -44,4 +59,5 @@ public class CustomUserDetails implements UserDetails {
     public String getUserName() {
         return userName;
     }
+    
 }

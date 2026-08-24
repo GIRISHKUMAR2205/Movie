@@ -14,12 +14,12 @@
  *   in dev). Without this, the cookie will silently not be sent.
  *
  * Expected backend contract:
- * - POST /auth/login          -> sets access + refresh cookies
- * - POST /auth/signup         -> sets access + refresh cookies
- * - POST /auth/google         -> sets access + refresh cookies (Google ID token in body)
- * - POST /auth/refresh        -> reads refresh cookie, rotates access cookie
- * - POST /auth/logout         -> clears cookies server-side
- * - GET  /auth/me             -> returns current user from access cookie
+ * - POST /users/login          -> sets access + refresh cookies
+ * - POST /users/signup         -> sets access + refresh cookies
+ * - POST /users/google         -> sets access + refresh cookies (Google ID token in body)
+ * - POST /users/refresh        -> reads refresh cookie, rotates access cookie
+ * - POST /users/logout         -> clears cookies server-side
+ * - GET  /users/me             -> returns current user from access cookie
  *
  * Cookie flags the backend should use (Express + cookie-parser example):
  *   res.cookie('accessToken', token, {
@@ -30,6 +30,7 @@
  *     path: '/',
  *   });
  */
+
 
 import axios from "axios";
 
@@ -70,8 +71,8 @@ axiosClient.interceptors.response.use(
     // Don't try to refresh on the auth endpoints themselves, and only
     // retry once per request (guarded by _retry).
     const isAuthRoute = originalRequest?.url?.includes("/auth/login") ||
-      originalRequest?.url?.includes("/auth/signup") ||
-      originalRequest?.url?.includes("/auth/refresh");
+      originalRequest?.url?.includes("/users/signup") ||
+      originalRequest?.url?.includes("/users/refresh");
 
     if (status === 401 && !originalRequest._retry && !isAuthRoute) {
       if (isRefreshing) {
@@ -87,7 +88,7 @@ axiosClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await axiosClient.post("/auth/refresh");
+        await axiosClient.post("/users/refresh");
         processQueue(null);
         return axiosClient(originalRequest);
       } catch (refreshError) {
