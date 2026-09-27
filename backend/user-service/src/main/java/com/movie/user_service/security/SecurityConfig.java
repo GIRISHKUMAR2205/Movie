@@ -1,12 +1,13 @@
 package com.movie.user_service.security;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.data.domain.AuditorAware;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,7 +20,6 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -39,20 +39,51 @@ public class SecurityConfig {
     private final CustomOidcUserDetailsService customOidcUserDetailsService;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
+    private final GatewaySecurityExceptionHandler gatewaySecurityExceptionHandler;
+    private final OAuth2AuthorizationRequestCookieRepository authorizationRequestRepository;
 
+    @Value("${frontend.app.allowed-origins:${frontend.app.base-url}}")
+    private List<String> frontendOrigins;
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http,JwtAuthFilter jwtAuthFilter,OAuthSignUpFilter signupFlowFilter) throws Exception{
+    @Order (1)
+    SecurityFilterChain filterChain1(
+            HttpSecurity http) throws Exception{
         // HeaderWriterLogoutHandler clearSiteData = new HeaderWriterLogoutHandler(new ClearSiteDataHeaderWriter(Directive.COOKIES));
         // CookieClearingLogoutHandler cookies = new CookieClearingLogoutHandler("auth-token");
         return http
-                .csrf(csrf->csrf.disable())
-                .cors(cors->cors.configurationSource(corsConfigurationSource()))
-                .anonymous(anonymous -> anonymous.disable())
+                // REST calls use bearer tokens. Refresh is protected by a custom request
+                // header plus credentialed CORS; OAuth2 uses its signed state cookie.
+                .csrf(csrf -> csrf.disable())
+                // .cors(cors->cors.configurationSource(corsConfigurationSource()))
+                .securityMatcher("/login**","/signup**", "/refresh",
+                            "/email-verifications/verify", "/actuator/health/**", "/actuator/info",
+                            "/actuator/prometheus")
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth-> auth.anyRequest().permitAll())
+                .build();
+        }
+
+    @Bean
+    @Order (2)
+    SecurityFilterChain filterChain(
+            HttpSecurity http,
+            JwtAuthFilter jwtAuthFilter,
+            OAuthSignUpFilter signupFlowFilter) throws Exception{
+        // HeaderWriterLogoutHandler clearSiteData = new HeaderWriterLogoutHandler(new ClearSiteDataHeaderWriter(Directive.COOKIES));
+        // CookieClearingLogoutHandler cookies = new CookieClearingLogoutHandler("auth-token");
+        return http
+                // REST calls use bearer tokens. Refresh is protected by a custom request
+                // header plus credentialed CORS; OAuth2 uses its signed state cookie.
+                .csrf(csrf -> csrf.disable())
+                // .cors(cors->cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
-                    .requestMatchers("/login**","/signup**","/signout**","/oauth2/**","/delete**").permitAll()
-                    .requestMatchers("/superadmin").hasRole("SUPERADMIN")
+                    .requestMatchers("/login**","/signup**", "/refresh", "/oauth2/**", "/login/oauth2/**",
+                            "/email-verifications/verify", "/actuator/health/**", "/actuator/info",
+                            "/actuator/prometheus").permitAll()
+                    .requestMatchers("/super/**").hasRole("SUPERADMIN")
                     .anyRequest().authenticated()
                     //     .anyRequest().permitAll()
                 )
@@ -70,16 +101,12 @@ public class SecurityConfig {
                 OAuth2AuthorizationRequestRedirectFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(
-                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
-                        )
+                        .authenticationEntryPoint(gatewaySecurityExceptionHandler)
+                        .accessDeniedHandler(gatewaySecurityExceptionHandler)
                 )
-                .sessionManagement(session ->
-                    session.sessionCreationPolicy(
-                            SessionCreationPolicy.STATELESS
-                    )
-                )
-                .oauth2Login(oauth -> oauth.defaultSuccessUrl("/dashboard")
+                .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .authorizationRequestRepository(authorizationRequestRepository))
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(customOidcUserDetailsService))
                         .successHandler(
                                 oAuth2LoginSuccessHandler
@@ -138,9 +165,9 @@ public class SecurityConfig {
         @Bean
         public CorsConfigurationSource corsConfigurationSource(){
         CorsConfiguration config=new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
-        config.setAllowedMethods(Arrays.asList("*"));
-        config.setAllowedHeaders(Arrays.asList("*"));  
+        config.setAllowedOrigins(frontendOrigins);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Accept", "Authorization", "Content-Type", "X-Requested-With"));
         config.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
@@ -148,4 +175,5 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
         }
+
 }

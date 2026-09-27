@@ -1,21 +1,34 @@
 package com.movie.user_service.dto;
 
-import com.movie.user_service.entity.Role;
-
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class SignupDto {
-    @NotNull
-    String name;
-    @NotNull
-        @Email
-    String email;
-    Role role;
-        @NotNull
-    String password;
-    @NotNull
-    String confirmPassword;
+    @NotBlank
+    @Size(max = 100)
+    private String name;
+
+    @NotBlank
+    @Email
+    @Size(max = 254)
+    private String email;
+
+    @NotBlank
+    @Size(min = 12, max = 128)
+    private String password;
+
+    @NotBlank
+    @Size(max = 128)
+    private String confirmPassword;
+
+    @AssertTrue(message = "Password confirmation must match the password")
+    public boolean isPasswordConfirmationMatching() {
+        return password != null && password.equals(confirmPassword);
+    }
 }

@@ -1,13 +1,18 @@
 package com.movie.user_service.dto;
 
-import lombok.Data;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class RoleDto {
-
-    Long userId;
     
-    String roleName;
+    @NotBlank
+    @Size(max = 100)
+    private String roleName;
 
-    String reason;
+    @Size(max = 500)
+    private String reason;
 }

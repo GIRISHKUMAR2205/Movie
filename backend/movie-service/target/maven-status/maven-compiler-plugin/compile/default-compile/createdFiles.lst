@@ -1,0 +1,14 @@
+com/movie/movie_service/controller/MovieController.class
+com/movie/movie_service/config/AuditingConfiguration.class
+com/movie/movie_service/dto/MovieResponse.class
+com/movie/movie_service/service/MovieCatalogService.class
+com/movie/movie_service/entity/Movie.class
+com/movie/movie_service/repository/MovieRepository.class
+com/movie/movie_service/dto/MovieUpsertRequest.class
+com/movie/movie_service/entity/BaseEntity.class
+com/movie/movie_service/error/GlobalExceptionHandler.class
+com/movie/movie_service/error/ResourceNotFoundException.class
+com/movie/movie_service/config/JwtProperties.class
+com/movie/movie_service/MovieServiceApplication.class
+com/movie/movie_service/error/ApiErrorResponse.class
+com/movie/movie_service/config/SecurityConfiguration.class

@@ -4,8 +4,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToMany;
@@ -27,6 +25,5 @@ public class Privilege extends BaseEntity{
     private String privilegeName;
 
     @ManyToMany(mappedBy = "privileges")
-    @JsonIgnore
     private Set<Role> roles = new HashSet<>();
 }

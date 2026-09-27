@@ -1,101 +1,127 @@
 package com.movie.user_service.controller;
 
-import com.movie.user_service.repository.UserRepository;
-import com.movie.user_service.security.CookieConfiguration;
-
 import com.movie.user_service.service.RoleRequestService;
+import com.movie.user_service.service.EmailVerificationService;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import com.movie.user_service.dto.LoginDto;
-import com.movie.user_service.dto.RespDto;
+import com.movie.user_service.dto.GatewayAuthResponseDto;
+import com.movie.user_service.dto.GatewayResponseDto;
 import com.movie.user_service.dto.RoleDto;
+import com.movie.user_service.dto.RoleRequestCreatedDto;
+import com.movie.user_service.dto.RoleRequestProgressDto;
 import com.movie.user_service.dto.SignupDto;
-import com.movie.user_service.entity.User;
 import com.movie.user_service.service.UserService;
+import com.movie.user_service.security.RefreshTokenCookieService;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping
 public class UserController {
+    private static final String BROWSER_REQUEST_HEADER = "X-Requested-With";
+    private static final String BROWSER_REQUEST_VALUE = "XMLHttpRequest";
+
     private final RoleRequestService roleRequestService;
-    private final UserRepository userRepository;
     private final UserService userService;
-    private final CookieConfiguration cookieConfiguration;
-
-
-    // @GetMapping("/login/oauth2/code/google")
-    // public ResponseEntity<?> getMethodName(Authentication auth) {
-    //     OAuth2AuthorizedClient oAuth2AuthorizedClient=authorizedClientService.loadAuthorizedClient("google",auth.getName());
-    //     OAuth2AccessToken oAuth2AccessToken=oAuth2AuthorizedClient.getAccessToken();
-    //     log.info("{}",oAuth2AccessToken);
-    //     return ResponseEntity.status(HttpStatus.OK).body(oAuth2AccessToken);
-    // }
+    private final EmailVerificationService emailVerificationService;
+    private final RefreshTokenCookieService refreshTokenCookieService;
     
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginDto loginDto,HttpServletRequest request,HttpServletResponse response) {
-        RespDto respDto = userService.loggedIn(loginDto);
-        Cookie cookie=cookieConfiguration.createCookie("auth-token",respDto.getToken(),60*60*24*15);
-        respDto.setToken(null);
-        response.addCookie(cookie);
-        return ResponseEntity.status(HttpStatus.OK).body(respDto);
+    public ResponseEntity<GatewayResponseDto<GatewayAuthResponseDto>> login(
+            @Valid @RequestBody LoginDto loginDto, HttpServletResponse response) {
+        GatewayAuthResponseDto authResponse = userService.loggedIn(loginDto);
+        refreshTokenCookieService.add(response, authResponse.refreshToken());
+        return ResponseEntity.ok(GatewayResponseDto.success(
+                HttpStatus.OK, "LOGIN_SUCCESS", "Login successful.", authResponse));
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody SignupDto signupDto,HttpServletResponse response) {
-        RespDto respDto=userService.saveUser(signupDto);
-        Cookie cookie=cookieConfiguration.createCookie("auth-token",respDto.getToken(),60*60*24*15);
-        respDto.setToken(null);
-        response.addCookie(cookie);
-        return ResponseEntity.status(HttpStatus.CREATED).body(respDto);
+    public ResponseEntity<GatewayResponseDto<GatewayAuthResponseDto>> signup(
+            @Valid @RequestBody SignupDto signupDto, HttpServletResponse response) {
+        GatewayAuthResponseDto authResponse=userService.saveUser(signupDto);
+        refreshTokenCookieService.add(response, authResponse.refreshToken());
+        return ResponseEntity.status(HttpStatus.CREATED).body(GatewayResponseDto.success(
+                HttpStatus.CREATED, "SIGNUP_SUCCESS", "Account created successfully.", authResponse));
     }
 
-    @GetMapping("/users")
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    @PostMapping("/refresh")
+    public ResponseEntity<GatewayResponseDto<GatewayAuthResponseDto>> refresh(
+            @RequestHeader(value = BROWSER_REQUEST_HEADER, required = false) String requestedWith,
+            HttpServletRequest request, HttpServletResponse response) {
+        if (!BROWSER_REQUEST_VALUE.equals(requestedWith)) {
+            throw new IllegalArgumentException("Refresh requires an XMLHttpRequest header.");
+        }
+        GatewayAuthResponseDto refreshed = userService.refresh(refreshTokenCookieService.read(request));
+        refreshTokenCookieService.add(response, refreshed.refreshToken());
+        return ResponseEntity.ok(GatewayResponseDto.success(
+                HttpStatus.OK, "TOKEN_REFRESHED", "Tokens refreshed successfully.",
+                refreshed));
     }
+
 
     @GetMapping("/me")
-    public ResponseEntity<?> getUserName(HttpServletResponse response) {
-        RespDto respDto=userService.getCurrentUser();
-        respDto.setToken(null);
-        return ResponseEntity.status(HttpStatus.OK).body(respDto);
+    public ResponseEntity<GatewayResponseDto<GatewayAuthResponseDto>> getUserName() {
+        GatewayAuthResponseDto authResponse=userService.getCurrentUser();
+        return ResponseEntity.ok(GatewayResponseDto.success(
+                HttpStatus.OK, "CURRENT_USER_RETRIEVED", "Current user retrieved successfully.", authResponse));
     }
 
-    //Signout Perfectly Working But using Spring security logout
     @PostMapping("/signout")
-    public ResponseEntity<?> logout(HttpServletResponse response) {
-        Cookie cookie = cookieConfiguration.createCookie("auth-token","",0);
-        response.addCookie(cookie);
+    public ResponseEntity<GatewayResponseDto<Void>> logout(Authentication authentication, HttpServletResponse response) {
+        userService.signOut(authentication.getName());
+        refreshTokenCookieService.clear(response);
         SecurityContextHolder.clearContext();
-        return ResponseEntity.status(HttpStatus.OK).body("User Logged Out");
-    }
-
-    @DeleteMapping("/delete")
-    public void delete(){
-        userRepository.deleteAll();
+        return ResponseEntity.ok(GatewayResponseDto.success(
+                HttpStatus.OK, "LOGOUT_SUCCESS", "Signed out and revoked active refresh tokens.", null));
     }
 
     @PostMapping("/requestAdminPrivilege")
-    public ResponseEntity<?> requestAdminPrivilege(@RequestBody RoleDto roleDto){
-        roleRequestService.request(roleDto);
-        return ResponseEntity.status(HttpStatus.OK).body("Request raised successfully");
+    public ResponseEntity<GatewayResponseDto<RoleRequestCreatedDto>> requestAdminPrivilege(
+            @Valid @RequestBody RoleDto roleDto, Authentication auth){
+        Long requestId = roleRequestService.request(auth.getName(), roleDto);
+        return ResponseEntity.ok(GatewayResponseDto.success(
+                HttpStatus.OK, "ROLE_REQUEST_CREATED", "Role request created successfully.",
+                new RoleRequestCreatedDto(requestId)));
+    }
+
+    @GetMapping("/role-requests")
+    public ResponseEntity<GatewayResponseDto<List<RoleRequestProgressDto>>> myRoleRequestProgress(Authentication auth) {
+        return ResponseEntity.ok(GatewayResponseDto.success(HttpStatus.OK, "ROLE_REQUEST_PROGRESS_RETRIEVED",
+                "Role request progress retrieved successfully.", roleRequestService.myRequestProgress(auth.getName())));
+    }
+
+    @GetMapping("/email-verifications/verify")
+    public ResponseEntity<GatewayResponseDto<Void>> verifyEmail(@RequestParam String token) {
+        emailVerificationService.verify(token);
+        return ResponseEntity.ok(GatewayResponseDto.success(
+                HttpStatus.OK, "EMAIL_VERIFIED", "Email address verified successfully.", null));
+    }
+
+    @PostMapping("/email-verifications/resend")
+    public ResponseEntity<GatewayResponseDto<Void>> resendVerification(Authentication auth) {
+        emailVerificationService.resend(auth.getName());
+        return ResponseEntity.ok(GatewayResponseDto.success(
+                HttpStatus.OK, "VERIFICATION_EMAIL_SENT", "A verification email has been sent.", null));
     }
     
 }

@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: movie-service
+  datasource:
+    url: ${MOVIE_DB_URL:jdbc:postgresql://localhost:5432/movie_db}
+    username: ${MOVIE_DB_USERNAME:postgres}
+    password: ${MOVIE_DB_PASSWORD:pass}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: ${SERVER_PORT:8086}
+  servlet:
+    context-path: ${SERVER_SERVLET_CONTEXT_PATH:/movies}
+
+showhub:
+  security:
+    local:
+      issuer: ${SHOWHUB_JWT_ISSUER:https://showhub.local/user-service}
+      audience: ${SHOWHUB_JWT_AUDIENCE:showhub-api}
+      jwt-signing-key: ${SHOWHUB_JWT_SIGNING_KEY}
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

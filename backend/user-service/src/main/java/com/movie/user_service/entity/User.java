@@ -12,8 +12,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-
 @Entity
 @Table(name = "users")
 @AllArgsConstructor
@@ -28,6 +26,9 @@ public class User extends BaseEntity {
     private String email;
 
     private String password;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
 
     @ManyToMany
     @JoinTable(
@@ -48,7 +49,6 @@ public class User extends BaseEntity {
         cascade = CascadeType.ALL,
         orphanRemoval = true
     )
-    @JsonManagedReference
     private List<OAuthAccount> oauthAccounts = new ArrayList<>();
     
     

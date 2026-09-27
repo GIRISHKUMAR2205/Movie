@@ -1,0 +1,10 @@
+/home/girish/Projects/backend/mail-service/src/main/java/com/movie/mail_service/MailServiceApplication.java
+/home/girish/Projects/backend/mail-service/src/main/java/com/movie/mail_service/config/MailProperties.java
+/home/girish/Projects/backend/mail-service/src/main/java/com/movie/mail_service/config/RabbitTopologyConfiguration.java
+/home/girish/Projects/backend/mail-service/src/main/java/com/movie/mail_service/entity/MailDelivery.java
+/home/girish/Projects/backend/mail-service/src/main/java/com/movie/mail_service/event/EmailVerificationMailEvent.java
+/home/girish/Projects/backend/mail-service/src/main/java/com/movie/mail_service/repository/MailDeliveryRepository.java
+/home/girish/Projects/backend/mail-service/src/main/java/com/movie/mail_service/service/EmailSender.java
+/home/girish/Projects/backend/mail-service/src/main/java/com/movie/mail_service/service/MailDeliveryService.java
+/home/girish/Projects/backend/mail-service/src/main/java/com/movie/mail_service/service/MailEventListener.java
+/home/girish/Projects/backend/mail-service/src/main/java/com/movie/mail_service/service/SmtpEmailSender.java

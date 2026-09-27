@@ -1,7 +1,5 @@
 package com.movie.user_service.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -35,7 +33,6 @@ public class RoleAudit extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_request_id", nullable = false)
-    @JsonBackReference
     private RoleRequest roleRequest;
 
     @Column(name = "reason", length = 500)

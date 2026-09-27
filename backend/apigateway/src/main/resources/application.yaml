@@ -1,0 +1,192 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: user-service
+              uri: ${showhub.gateway.services.user-service-url}
+              predicates:
+                - Path=/api/v1/users/**
+              filters:
+                - StripPrefix=3
+                - PrefixPath=/users
+                - name: CircuitBreaker
+                  args:
+                    id: user-service
+                    fallbackUri: forward:/users
+                    statusCodes: 500,502,503,504
+                - name: Retry
+                  args:
+                    retries: ${showhub.gateway.resilience.retry-attempts}
+                    methods: GET,HEAD
+                    series: SERVER_ERROR
+            - id: booking-service-seat-status
+              uri: ${showhub.gateway.services.booking-service-url}
+              predicates:
+                - Path=/api/v1/shows/*/seats
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    id: booking-service
+                    fallbackUri: forward:/internal/gateway-fallback/booking-service
+                    statusCodes: 500,502,503,504
+                - name: Retry
+                  args:
+                    retries: ${showhub.gateway.resilience.retry-attempts}
+                    methods: GET,HEAD
+                    series: SERVER_ERROR
+            - id: theater-service
+              uri: ${showhub.gateway.services.theater-service-url}
+              predicates:
+                - Path=/api/v1/theaters/**
+              filters:
+                - StripPrefix=3
+                - PrefixPath=/theaters
+                - name: CircuitBreaker
+                  args:
+                    id: theater-service
+                    fallbackUri: forward:/internal/gateway-fallback/theater-service
+                    statusCodes: 500,502,503,504
+                - name: Retry
+                  args:
+                    retries: ${showhub.gateway.resilience.retry-attempts}
+                    methods: GET,HEAD
+                    series: SERVER_ERROR
+            - id: movie-service
+              uri: ${showhub.gateway.services.movie-service-url}
+              predicates:
+                - Path=/api/v1/movies/**
+              filters:
+                - StripPrefix=3
+                - PrefixPath=/movies
+                - name: CircuitBreaker
+                  args:
+                    id: movie-service
+                    fallbackUri: forward:/internal/gateway-fallback/movie-service
+                    statusCodes: 500,502,503,504
+                - name: Retry
+                  args:
+                    retries: ${showhub.gateway.resilience.retry-attempts}
+                    methods: GET,HEAD
+                    series: SERVER_ERROR
+            # - id: catalog-service
+            #   uri: ${showhub.gateway.services.catalog-service-url}
+            #   predicates:
+            #     - Path=/api/v1/concerts/**,/api/v1/venues/**
+            #   filters:
+            #     - name: CircuitBreaker
+            #       args:
+            #         id: catalog-service
+            #         fallbackUri: forward:/internal/gateway-fallback/catalog-service
+            #         statusCodes: 500,502,503,504
+            #     - name: Retry
+            #       args:
+            #         retries: ${showhub.gateway.resilience.retry-attempts}
+            #         methods: GET,HEAD
+            #         series: SERVER_ERROR
+            - id: booking-service
+              uri: ${showhub.gateway.services.booking-service-url}
+              predicates:
+                - Path=/api/v1/bookings/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    id: booking-service
+                    fallbackUri: forward:/internal/gateway-fallback/booking-service
+                    statusCodes: 500,502,503,504
+                - name: Retry
+                  args:
+                    retries: ${showhub.gateway.resilience.retry-attempts}
+                    methods: GET,HEAD
+                    series: SERVER_ERROR
+            - id: payment-service
+              uri: ${showhub.gateway.services.payment-service-url}
+              predicates:
+                - Path=/api/v1/payments/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    id: payment-service
+                    fallbackUri: forward:/internal/gateway-fallback/payment-service
+                    statusCodes: 500,502,503,504
+                - name: Retry
+                  args:
+                    retries: ${showhub.gateway.resilience.retry-attempts}
+                    methods: GET,HEAD
+                    series: SERVER_ERROR
+            - id: theater-show-catalog
+              uri: ${showhub.gateway.services.theater-service-url}
+              predicates:
+                - Path=/api/v1/shows
+              filters:
+                - StripPrefix=2
+                - PrefixPath=/theaters
+                - name: CircuitBreaker
+                  args:
+                    id: theater-service
+                    fallbackUri: forward:/internal/gateway-fallback/theater-service
+                    statusCodes: 500,502,503,504
+                - name: Retry
+                  args:
+                    retries: ${showhub.gateway.resilience.retry-attempts}
+                    methods: GET,HEAD
+                    series: SERVER_ERROR
+server:
+  port: 8080
+
+showhub:
+  gateway:
+    cors:
+      allowed-origins: ${GATEWAY_ALLOWED_ORIGINS:http://localhost:5173}
+    services:
+      user-service-url: ${USER_SERVICE_URL:http://localhost:8084}
+      catalog-service-url: ${CATALOG_SERVICE_URL:http://localhost:8081}
+      booking-service-url: ${BOOKING_SERVICE_URL:http://localhost:8082}
+      payment-service-url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+      theater-service-url: ${THEATER_SERVICE_URL:http://localhost:8087}
+      movie-service-url: ${MOVIE_SERVICE_URL:http://localhost:8086}
+    resilience:
+      # Rate limiting is per JWT subject, with IP fallback for unauthenticated public routes.
+      # It is local to this gateway instance; use Redis-backed limits before horizontal scaling.
+      rate-limit-for-period: ${GATEWAY_RATE_LIMIT_FOR_PERIOD:100}
+      rate-limit-refresh-period: ${GATEWAY_RATE_LIMIT_REFRESH_PERIOD:1m}
+      max-rate-limit-keys: ${GATEWAY_MAX_RATE_LIMIT_KEYS:10000}
+      max-concurrent-calls: ${GATEWAY_MAX_CONCURRENT_CALLS:50}
+      max-wait-duration: ${GATEWAY_MAX_WAIT_DURATION:0ms}
+      sliding-window-size: ${GATEWAY_CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE:20}
+      minimum-number-of-calls: ${GATEWAY_CIRCUIT_BREAKER_MINIMUM_CALLS:10}
+      failure-rate-threshold: ${GATEWAY_CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD:50}
+      open-state-duration: ${GATEWAY_CIRCUIT_BREAKER_OPEN_STATE_DURATION:30s}
+      timeout: ${GATEWAY_DOWNSTREAM_TIMEOUT:5s}
+      retry-attempts: ${GATEWAY_RETRY_ATTEMPTS:2}
+  security:
+    local:
+      issuer: ${SHOWHUB_JWT_ISSUER:https://showhub.local/user-service}
+      audience: ${SHOWHUB_JWT_AUDIENCE:showhub-api}
+      jwt-signing-key: ${SHOWHUB_JWT_SIGNING_KEY:}
+
+management:
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    root: info
+  pattern:
+    level: "%5p [correlationId:%X{correlationId:-}]"

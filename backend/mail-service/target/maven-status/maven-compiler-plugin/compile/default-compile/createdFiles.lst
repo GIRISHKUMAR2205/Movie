@@ -1,0 +1,10 @@
+com/movie/mail_service/entity/MailDelivery.class
+com/movie/mail_service/repository/MailDeliveryRepository.class
+com/movie/mail_service/config/MailProperties.class
+com/movie/mail_service/service/EmailSender.class
+com/movie/mail_service/MailServiceApplication.class
+com/movie/mail_service/event/EmailVerificationMailEvent.class
+com/movie/mail_service/service/SmtpEmailSender.class
+com/movie/mail_service/service/MailDeliveryService.class
+com/movie/mail_service/service/MailEventListener.class
+com/movie/mail_service/config/RabbitTopologyConfiguration.class

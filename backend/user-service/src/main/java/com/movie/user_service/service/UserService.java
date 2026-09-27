@@ -17,18 +17,18 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.movie.user_service.dto.LoginDto;
-import com.movie.user_service.dto.RespDto;
+import com.movie.user_service.dto.GatewayAuthResponseDto;
 import com.movie.user_service.dto.SignupDto;
 import com.movie.user_service.entity.CustomUserDetails;
-import com.movie.user_service.entity.OAuthAccount;
 import com.movie.user_service.entity.Role;
 import com.movie.user_service.entity.User;
 import com.movie.user_service.mapper.UserMapper;
-import com.movie.user_service.repository.OAuthRepository;
 import com.movie.user_service.repository.UserRepository;
 import com.movie.user_service.exceptions.AlreadyExistsException;
+import com.movie.user_service.exceptions.ResourceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,11 +36,12 @@ public class UserService {
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
-    private final OAuthRepository oAuthRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final EmailVerificationService emailVerificationService;
+    private final RefreshTokenService refreshTokenService;
 
     
     public static final Logger log=LoggerFactory.getLogger(UserService.class);
@@ -48,20 +49,20 @@ public class UserService {
 
     
 
-    public RespDto saveUser(SignupDto signupDto) {
+    @Transactional
+    public GatewayAuthResponseDto saveUser(SignupDto signupDto) {
         Optional<User> user=userRepository.findByEmail(signupDto.getEmail());
         if(user.isPresent()){
             throw new AlreadyExistsException("UserName already exists");
         }
-        log.info("signUPDTO {}",signupDto);
+
         User savedUser= userMapper.fromSignupDto(signupDto);
         savedUser.setPassword(passwordEncoder.encode(signupDto.getPassword()));
         Set<Role> roles=Set.of(roleRepository.findByRoleName("ROLE_USER"));
         savedUser.setRoles(roles);
-        log.info("User saved {}",savedUser);
         savedUser.setCreatedBy(signupDto.getEmail());
-        log.info("saveddUser {}", savedUser);
         userRepository.save(savedUser);
+        emailVerificationService.sendVerificationEmail(savedUser);
 
         Set<SimpleGrantedAuthority> authorities = savedUser.getRoles()
         .stream()
@@ -84,50 +85,62 @@ public class UserService {
              null,
              authorities);
         String accessToken = jwtService.generateToken(authentication);
-        RespDto respDto = userMapper.toRespDto(savedUser);
-        respDto.setToken(accessToken);
-        return respDto;
+        return GatewayAuthResponseDto.from(savedUser, accessToken, refreshTokenService.issue(savedUser));
     }
 
-    public RespDto loggedIn(LoginDto loginDto){
+    public GatewayAuthResponseDto loggedIn(LoginDto loginDto){
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
-                loginDto.getEmail(),loginDto.getPassword()));
+                loginDto.getUsername(),loginDto.getPassword()));
         
                 CustomUserDetails user =
             (CustomUserDetails) authentication.getPrincipal();
 
         String accessToken = jwtService.generateToken(authentication);
+        User persistedUser = userRepository.findByEmail(user.getUsername())
+                .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+        String refreshToken = refreshTokenService.issue(persistedUser);
 
-        return new RespDto(
-                user.getUserName(),
-                user.getUsername(),
-                accessToken,
-                user.getRoles());
+        return GatewayAuthResponseDto.from(user.getUserName(), user.getUsername(), user.getRoles(),
+                persistedUser.isEmailVerified(), accessToken, refreshToken);
     }
 
-    public RespDto getCurrentUser() {
+    public GatewayAuthResponseDto getCurrentUser() {
         Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
-        log.info("AUthentication {}",authentication);
         if(authentication != null ){
-            String providerSubject = authentication.getPrincipal().toString();
-            Optional<OAuthAccount> oauth = oAuthRepository.findByProviderSubject(providerSubject);
-            User user;
-            if (oauth.isPresent()) {
-                user = oauth.get().getUser();
-            } else {
-                user = userRepository.findByEmail(authentication.getPrincipal().toString())
-                        .orElseThrow(() -> new RuntimeException("User not found"));
-            }
+            User user = userRepository.findByEmail(authentication.getName())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-            return new RespDto(
-                    user.getUserName(),
-                    user.getEmail(),
-                    null,//Change it to accessToken when implemented RefreshToken
-                    user.getRoles());
+            return GatewayAuthResponseDto.from(user, null, null);
         }else{
             throw new BadCredentialsException("No Active User");
         }
+    }
+
+    @Transactional
+    public GatewayAuthResponseDto refresh(String refreshToken) {
+        RefreshTokenService.RotatedRefreshToken rotatedToken = refreshTokenService.rotate(refreshToken);
+        User user = rotatedToken.user();
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                user.getEmail(), null, authoritiesFor(user));
+        return GatewayAuthResponseDto.from(user, jwtService.generateAccessToken(authentication),
+                rotatedToken.rawToken());
+    }
+
+    @Transactional
+    public void signOut(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        refreshTokenService.revokeAllForUser(user);
+    }
+
+    private Set<SimpleGrantedAuthority> authoritiesFor(User user) {
+        return user.getRoles().stream()
+                .flatMap(role -> Stream.concat(
+                        Stream.of(new SimpleGrantedAuthority(role.getRoleName())),
+                        role.getPrivileges().stream().map(privilege ->
+                                new SimpleGrantedAuthority(privilege.getPrivilegeName()))))
+                .collect(Collectors.toSet());
     }
    
 }

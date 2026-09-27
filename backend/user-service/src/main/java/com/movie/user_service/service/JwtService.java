@@ -1,10 +1,8 @@
 package com.movie.user_service.service;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -19,25 +17,30 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
+import com.movie.user_service.security.JwtProperties;
 
 @Service
 @RequiredArgsConstructor
 public class JwtService{
     private final  JwtEncoder jwtEncoder;
     private final JwtDecoder jwtDecoder;
-
-    @Value("${spring.security.jwt.secret}")
-    private String secret;
-    @Value("${spring.security.jwt.expiration}")
-    private int expirationAfter;
+    private final JwtProperties jwtProperties;
 
     public String generateToken(Authentication authentication){
+        return generateAccessToken(authentication);
+    }
+
+    public String generateAccessToken(Authentication authentication){
         List<String> roleNames = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
-        JwtClaimsSet claimsSet=JwtClaimsSet.builder().
-        subject(authentication.getName())
-        .issuedAt(Instant.now())
-        .expiresAt(Instant.now().plus(expirationAfter,ChronoUnit.DAYS))
+        Instant issuedAt = Instant.now();
+        JwtClaimsSet claimsSet=JwtClaimsSet.builder()
+        .issuer(jwtProperties.issuer())
+        .audience(List.of(jwtProperties.audience()))
+        .subject(authentication.getName())
+        .issuedAt(issuedAt)
+        .expiresAt(issuedAt.plus(jwtProperties.accessTokenTtl()))
         .claim("roles", roleNames)
+        .claim("token_type", "access")
         // .claims( claims -> {
         //     claims.put("roles",roleNames);
         // })
@@ -52,6 +55,18 @@ public class JwtService{
         }catch(JwtException ex){
             throw new BadJwtException("Invalid Jwt Token");
         }
+    }
+
+    public Jwt verifyAccessToken(String token) {
+        return verifyTokenType(token, "access");
+    }
+
+    private Jwt verifyTokenType(String token, String expectedType) {
+        Jwt jwt = verifyToken(token);
+        if (!expectedType.equals(jwt.getClaimAsString("token_type"))) {
+            throw new BadJwtException("Incorrect JWT token type");
+        }
+        return jwt;
     }
 
 }

@@ -1,0 +1,14 @@
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/MovieServiceApplication.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/config/AuditingConfiguration.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/config/JwtProperties.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/config/SecurityConfiguration.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/controller/MovieController.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/dto/MovieResponse.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/dto/MovieUpsertRequest.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/entity/BaseEntity.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/entity/Movie.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/error/ApiErrorResponse.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/error/GlobalExceptionHandler.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/error/ResourceNotFoundException.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/repository/MovieRepository.java
+/home/girish/Projects/backend/movie-service/src/main/java/com/movie/movie_service/service/MovieCatalogService.java

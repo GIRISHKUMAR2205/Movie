@@ -1,16 +1,21 @@
 package com.movie.user_service.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class LoginDto {
 
-    @NotNull
-    @Email
-    String email;
+    @NotBlank
+    @Size(max = 254)
+    @JsonAlias("email")
+    private String username;
     
-    @NotNull
-    String password;
+    @NotBlank
+    @Size(max = 128)
+    private String password;
 }

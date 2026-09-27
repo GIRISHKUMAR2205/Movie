@@ -143,6 +143,7 @@
   border-radius: 4px;
   background: #fff;
   cursor: pointer;
+  color: #000;  
 }
 .auth-footer {
   margin-top: 22px;

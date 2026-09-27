@@ -14,12 +14,25 @@ public interface UserRepository extends JpaRepository<User,Long>{
 
     Optional<User> findByEmail(String email);
 
-    @Query("""
-    SELECT DISTINCT u
-    FROM User u
-    LEFT JOIN FETCH u.roles r
-    LEFT JOIN FETCH r.privileges
-    WHERE u.id = :id
-""")
-Optional<User> findByIdWithRoleAndPrivilege(@Param("id") Long id);
+    Optional<User> findByEmailOrUserName(String email, String userName);
+
+    boolean existsByEmailAndIdNot(String email, Long id);
+
+        @Query("""
+        SELECT DISTINCT u
+        FROM User u
+        LEFT JOIN FETCH u.roles r
+        LEFT JOIN FETCH r.privileges
+        WHERE u.id = :id
+    """)
+    Optional<User> findByIdWithRoleAndPrivilege(@Param("id") Long id);
+
+     @Query("""
+        SELECT DISTINCT u
+        FROM User u
+        LEFT JOIN FETCH u.oauthAccounts oa
+        WHERE u.email = :email OR(
+        oa.providerSubject = :email)
+    """)
+    Optional<User> findByEmailOrProviderSubject(@Param("email") String email);
 }

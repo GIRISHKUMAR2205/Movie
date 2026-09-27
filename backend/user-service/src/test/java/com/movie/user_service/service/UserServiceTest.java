@@ -22,7 +22,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.movie.user_service.dto.LoginDto;
-import com.movie.user_service.dto.RespDto;
+import com.movie.user_service.dto.GatewayAuthResponseDto;
 import com.movie.user_service.dto.SignupDto;
 import com.movie.user_service.entity.CustomUserDetails;
 import com.movie.user_service.entity.OAuthAccount;
@@ -60,6 +60,12 @@ class UserServiceTest {
     private JwtService jwtService;
 
     @Mock
+    private EmailVerificationService emailVerificationService;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
+    @Mock
     private Authentication authentication;
 
     @Mock
@@ -88,6 +94,8 @@ class UserServiceTest {
         signupDto.setPassword("password");
 
         User user = new User();
+        user.setUserName("John");
+        user.setEmail("john@test.com");
 
         Role userRole = mock(Role.class);
         Privilege privilege = mock(Privilege.class);
@@ -113,20 +121,21 @@ class UserServiceTest {
         when(roleRepository.findByRoleName("ROLE_USER"))
                 .thenReturn(userRole);
 
-        RespDto expectedResponse = mock(RespDto.class);
-
-        when(userMapper.toRespDto(user))
-                .thenReturn(expectedResponse);
-
         when(jwtService.generateToken(any(Authentication.class)))
                 .thenReturn("jwt-token");
 
+        when(refreshTokenService.issue(user))
+                .thenReturn("opaque-token");
+
         // Act
-        RespDto result = userService.saveUser(signupDto);
+        GatewayAuthResponseDto result = userService.saveUser(signupDto);
 
         // Assert
-
-        assertSame(expectedResponse, result);
+        assertEquals("John", result.name());
+        assertEquals("john@test.com", result.email());
+        assertEquals(Set.of("ROLE_USER"), result.roles());
+        assertEquals("jwt-token", result.accessToken());
+        assertEquals("opaque-token", result.refreshToken());
 
         assertEquals("encoded-password", user.getPassword());
 
@@ -146,8 +155,6 @@ class UserServiceTest {
         verify(jwtService)
                 .generateToken(any(Authentication.class));
 
-        verify(userMapper)
-                .toRespDto(user);
     }
 
 
@@ -218,9 +225,6 @@ class UserServiceTest {
         when(roleRepository.findByRoleName("ROLE_USER"))
                 .thenReturn(role);
 
-        when(userMapper.toRespDto(user))
-                .thenReturn(mock(RespDto.class));
-
         when(jwtService.generateToken(any()))
                 .thenReturn("token");
 
@@ -252,7 +256,7 @@ class UserServiceTest {
 
         // Arrange
         LoginDto loginDto = new LoginDto();
-        loginDto.setEmail("john@test.com");
+        loginDto.setUsername("john@test.com");
         loginDto.setPassword("password");
 
         CustomUserDetails user =
@@ -267,6 +271,11 @@ class UserServiceTest {
         when(user.getRoles())
                 .thenReturn(Set.of());
 
+        User persistedUser = new User();
+        persistedUser.setEmail("john@test.com");
+        when(userRepository.findByEmail("john@test.com"))
+                .thenReturn(Optional.of(persistedUser));
+
         when(authentication.getPrincipal())
                 .thenReturn(user);
 
@@ -278,7 +287,7 @@ class UserServiceTest {
                 .thenReturn("jwt-token");
 
         // Act
-        RespDto result = userService.loggedIn(loginDto);
+        GatewayAuthResponseDto result = userService.loggedIn(loginDto);
 
         // Assert
         assertNotNull(result);
@@ -296,7 +305,7 @@ class UserServiceTest {
 
         // Arrange
         LoginDto loginDto = new LoginDto();
-        loginDto.setEmail("john@test.com");
+        loginDto.setUsername("john@test.com");
         loginDto.setPassword("wrong-password");
 
         when(authenticationManager.authenticate(
@@ -319,74 +328,55 @@ class UserServiceTest {
     // ============================================================
 
     @Test
-    void getCurrentUser_shouldReturnOAuthUser() {
+    void getCurrentUser_shouldReturnBearerUser() {
 
         // Arrange
         User user = new User();
         user.setUserName("John");
         user.setEmail("john@test.com");
 
-        OAuthAccount oauthAccount = mock(OAuthAccount.class);
-
-        when(authentication.getPrincipal())
-                .thenReturn("google-subject-123");
+        when(authentication.getName()).thenReturn("john@test.com");
 
         when(securityContext.getAuthentication())
                 .thenReturn(authentication);
 
         SecurityContextHolder.setContext(securityContext);
 
-        when(oAuthRepository.findByProviderSubject(
-                "google-subject-123"))
-                .thenReturn(Optional.of(oauthAccount));
-
-        when(oauthAccount.getUser())
-                .thenReturn(user);
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(user));
 
         // Act
-        RespDto result = userService.getCurrentUser();
+        GatewayAuthResponseDto result = userService.getCurrentUser();
 
         // Assert
         assertNotNull(result);
 
-        verify(oAuthRepository)
-                .findByProviderSubject("google-subject-123");
-
-        verify(userRepository, never())
-                .findByEmail(anyString());
+        verify(userRepository).findByEmail("john@test.com");
     }
 
 
     @Test
-    void getCurrentUser_shouldReturnNormalUserWhenOAuthAccountNotFound() {
+    void getCurrentUser_shouldReturnNormalUser() {
 
         // Arrange
         User user = new User();
         user.setUserName("John");
         user.setEmail("john@test.com");
 
-        when(authentication.getPrincipal())
-                .thenReturn("john@test.com");
+        when(authentication.getName()).thenReturn("john@test.com");
 
         when(securityContext.getAuthentication())
                 .thenReturn(authentication);
 
         SecurityContextHolder.setContext(securityContext);
-
-        when(oAuthRepository.findByProviderSubject("john@test.com"))
-                .thenReturn(Optional.empty());
 
         when(userRepository.findByEmail("john@test.com"))
                 .thenReturn(Optional.of(user));
 
         // Act
-        RespDto result = userService.getCurrentUser();
+        GatewayAuthResponseDto result = userService.getCurrentUser();
 
         // Assert
         assertNotNull(result);
-
-        verify(oAuthRepository)
-                .findByProviderSubject("john@test.com");
 
         verify(userRepository)
                 .findByEmail("john@test.com");
@@ -397,16 +387,12 @@ class UserServiceTest {
     void getCurrentUser_shouldThrowWhenUserNotFound() {
 
         // Arrange
-        when(authentication.getPrincipal())
-                .thenReturn("john@test.com");
+        when(authentication.getName()).thenReturn("john@test.com");
 
         when(securityContext.getAuthentication())
                 .thenReturn(authentication);
 
         SecurityContextHolder.setContext(securityContext);
-
-        when(oAuthRepository.findByProviderSubject("john@test.com"))
-                .thenReturn(Optional.empty());
 
         when(userRepository.findByEmail("john@test.com"))
                 .thenReturn(Optional.empty());

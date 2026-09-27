@@ -2,49 +2,98 @@ spring:
   application:
     name: user-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/users
-    username: postgres
-    password: pass
+    url: ${USER_DB_URL}
+    username: ${USER_DB_USERNAME}
+    password: ${USER_DB_PASSWORD}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:showhub}
+    password: ${RABBITMQ_PASSWORD:showhub}
+    publisher-confirm-type: correlated
+    publisher-returns: true
   security:
-    jwt:
-      secret: 15631[advad]3a53d23f0va54f1era54g320av1d2v0a21vdfvaVaDADVajkdvhbkjav #Secret 
-      expiration: 30
-    cookie:
-      name: auth-token
-      httpOnly: false
-      secure: false
-      max-age: 60 * 60 * 24 * 30 # 30 days
     oauth2:
       client:
         registration:
           google:
-            client-id: ${CLIENT_ID}
-            client-secret: ${CLIENT_SECRET}
-            redirect-uri: http://localhost:8084/users/login/oauth2/code/google
-            # authorization-grant-type: authorization_code
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: "${GOOGLE_REDIRECT_URI:{baseUrl}/login/oauth2/code/{registrationId}}"
             scope:
                 - profile
                 - email
                 - openid
   jpa:
     hibernate:
-      ddl-auto: update #change it to create for entity changes.
+      ddl-auto: validate
 
-    show-sql: true
+    show-sql: ${SHOWHUB_JPA_SHOW_SQL:false}
 
     properties:
       hibernate:
         format-sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # Required only while adopting the existing Hibernate-created schema.
+    # After the first successful migration, disable this outside the local profile.
+    # baseline-on-migrate: true
+    # baseline-version: 1
 server:
-    port: 8084
+    port: ${SERVER_PORT:8084}
     servlet:
-      context-path: /users
+      context-path: ${SERVER_SERVLET_CONTEXT_PATH:/users}
+
+showhub:
+  security:
+    local:
+      issuer: ${SHOWHUB_JWT_ISSUER:https://showhub.local/user-service}
+      audience: ${SHOWHUB_JWT_AUDIENCE:showhub-api}
+      jwt-signing-key: ${SHOWHUB_JWT_SIGNING_KEY}
+      access-token-ttl: ${SHOWHUB_JWT_ACCESS_TOKEN_TTL:PT15M}
+    refresh-token:
+      ttl: ${SHOWHUB_REFRESH_TOKEN_TTL:P30D}
+    refresh-cookie:
+      name: ${SHOWHUB_REFRESH_COOKIE_NAME:showhub_refresh}
+      domain: ${SHOWHUB_REFRESH_COOKIE_DOMAIN:}
+      path: ${SHOWHUB_REFRESH_COOKIE_PATH:/}
+      secure: ${SHOWHUB_REFRESH_COOKIE_SECURE:true}
+      same-site: ${SHOWHUB_REFRESH_COOKIE_SAME_SITE:None}
+  email-verification:
+    # Send users to the SPA; it submits the one-time token through the gateway.
+    verification-url: ${SHOWHUB_EMAIL_VERIFICATION_URL:http://localhost:5173/verify-email}
+    token-ttl: ${SHOWHUB_EMAIL_VERIFICATION_TOKEN_TTL:PT24H}
+  outbox:
+    relay:
+      enabled: ${SHOWHUB_OUTBOX_RELAY_ENABLED:true}
+      exchange: ${SHOWHUB_MAIL_EXCHANGE:showhub.events}
+      routing-key: ${SHOWHUB_MAIL_ROUTING_KEY:email.verification.requested}
+      queue: ${SHOWHUB_MAIL_QUEUE:showhub.mail.email}
+      dead-letter-exchange: ${SHOWHUB_MAIL_DLX:showhub.mail.dlx}
+      dead-letter-queue: ${SHOWHUB_MAIL_DLQ:showhub.mail.email.dlq}
+      fixed-delay: ${SHOWHUB_OUTBOX_RELAY_FIXED_DELAY:PT1S}
+      claim-timeout: ${SHOWHUB_OUTBOX_RELAY_CLAIM_TIMEOUT:PT1M}
+      confirm-timeout: ${SHOWHUB_OUTBOX_RELAY_CONFIRM_TIMEOUT:PT10S}
+      initial-retry-delay: ${SHOWHUB_OUTBOX_RELAY_INITIAL_RETRY_DELAY:PT1S}
+      max-retry-delay: ${SHOWHUB_OUTBOX_RELAY_MAX_RETRY_DELAY:PT5M}
+      batch-size: ${SHOWHUB_OUTBOX_RELAY_BATCH_SIZE:50}
 
 management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
 
 springdoc:
   api-docs:
@@ -56,12 +105,11 @@ springdoc:
 logging:
   level:
     root: info
-    org.springframework.security: DEBUG
-    org.springframework.security.oauth2: TRACE
   file:
-    path: /home/girish/Projects/backend/user-service/logs
+    path: ${SHOWHUB_LOG_PATH:/home/girish/Projects/backend/user-service/logs}
 frontend:
   app:
-    base-url: http://localhost:3000
+    base-url: ${FRONTEND_APP_BASE_URL:http://localhost:5173}
+    allowed-origins: ${FRONTEND_ALLOWED_ORIGINS:${frontend.app.base-url}}
     login-url: ${frontend.app.base-url}/login
-    oauth2-redirect-url: ${frontend.app.base-url}/dashboard
+    oauth2-redirect-url: ${frontend.app.base-url}/auth/callback
