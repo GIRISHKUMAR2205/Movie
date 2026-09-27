@@ -122,15 +122,6 @@ npm test
 npm run build
 ```
 
-## Deployment and quality gates
-
-Every deployable application has a Dockerfile. Kubernetes manifests are kept
-centralized in [`infrastructure/kubernetes`](infrastructure/kubernetes/README.md)
-so the deployment topology remains visible in one place. GitHub Actions runs
-regression tests, builds images, and—when configured with protected secrets—
-deploys and publishes a health-check report. A release must meet the configured
-health success-rate threshold after rollout.
-
 ## Further documentation
 
 - [`backend/README.md`](backend/README.md) — backend conventions and service map
